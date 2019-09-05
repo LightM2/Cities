@@ -55,11 +55,9 @@ public class MainFragment extends Fragment {
 
     private RVAdapter adapter;
 
-    private ArrayList<String> cityNamesTest = new  ArrayList<>();
+    private ArrayList<String> cityNamesTest = new ArrayList<>();
 
     private ArrayList<String> autoCompleteCities = new ArrayList<>();
-
-    private CompositeDisposable compositeDisposable = new CompositeDisposable();
 
     private CityDatabase db;
 
@@ -76,82 +74,66 @@ public class MainFragment extends Fragment {
     @Override
     public void onViewCreated(@NotNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        db = Room.databaseBuilder(view.getContext(),CityDatabase.class,"cities").build();
+        db = Room.databaseBuilder(view.getContext(), CityDatabase.class, "cities").build();
 
         readingFromDB();
 
         final AutoCompleteTextView newCityName = view.findViewById(R.id.cities_tv);
-        final ArrayAdapter<String> tvAdapter = new ArrayAdapter<>(view.getContext(),android.R.layout.simple_dropdown_item_1line, autoCompleteCities);
+        final ArrayAdapter<String> tvAdapter = new ArrayAdapter<>(view.getContext(), android.R.layout.simple_dropdown_item_1line, autoCompleteCities);
         newCityName.setAdapter(tvAdapter);
 
         retrofit = GeoNamesApi.getClient(view.getContext());
 
         callEndpoints();
 
-        cityNamesTest.add("Kyiv");
-        cityNamesTest.add("Poltava");
-
-
         RecyclerView recyclerView = view.findViewById(R.id.cities_list_rv);
         recyclerView.setLayoutManager(new LinearLayoutManager(this.getContext()));
         adapter = new RVAdapter(this.getContext(), cityNamesTest);
         recyclerView.setAdapter(adapter);
 
-        newCityName.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                Log.d("testR", String.valueOf(i));
+        newCityName.setOnItemClickListener((adapterView, view12, i, l) -> {
+            Log.d("testR", String.valueOf(i));
 
-                if (!cityNamesTest.contains(tvAdapter.getItem(i))){
-                    cityNamesTest.add(tvAdapter.getItem(i));
-                    adapter.notifyDataSetChanged();
+            if (!cityNamesTest.contains(tvAdapter.getItem(i))) {
+                cityNamesTest.add(tvAdapter.getItem(i));
+                adapter.notifyDataSetChanged();
 
-                }
+                ArrayList<City> cities = new ArrayList<>();
+                City city = new City();
+                city.setCityList(cityNamesTest.get(cityNamesTest.size()-1));
+                cities.add(city);
+                writingToDB(cities);
+
             }
         });
 
-        final EditText editText = (EditText)view.findViewById(R.id.filter_et);
-        editText.setOnKeyListener(new View.OnKeyListener()
-                                  {
-                                      @Override
-                                      public boolean onKey(View view, int i, KeyEvent keyEvent) {
-                                          if(keyEvent.getAction() == KeyEvent.ACTION_DOWN &&
-                                                  (i == KeyEvent.KEYCODE_ENTER))
-                                          {
-                                              Log.d("testR", editText.getText().toString());
-                                              ArrayList<String> cityName = sortedCities(editText.getText().toString());
-                                              cityNamesTest.clear();
-                                              cityNamesTest.addAll(cityName);
+        final EditText editText = (EditText) view.findViewById(R.id.filter_et);
+        editText.setOnKeyListener((view1, i, keyEvent) -> {
+                    if (keyEvent.getAction() == KeyEvent.ACTION_DOWN &&
+                            (i == KeyEvent.KEYCODE_ENTER)) {
+                        Log.d("testR", editText.getText().toString());
+                        ArrayList<String> cityName = sortedCities(editText.getText().toString());
+                        cityNamesTest.clear();
+                        cityNamesTest.addAll(cityName);
+                        adapter.notifyDataSetChanged();
+                        return true;
+                    }
 
+                    return false;
 
-                                              return true;
-                                          }
-                                          ArrayList<City> cities = new  ArrayList<>();
-                                          for (int j = 0; j<cityNamesTest.size(); j++){
-                                              City city = new City();
-                                              city.setCityList(cityNamesTest.get(i));
-                                          }
-                                          writingToDB(cities);
-                                          adapter.notifyDataSetChanged();
-                                          return false;
-
-                                      }
-
-
-                                  }
+                }
         );
 
     }
 
-
     @Override
-    public void onDestroy() {
+    public void onPause() {
 
-        compositeDisposable.clear();
-        super.onDestroy();
+        super.onPause();
     }
 
-    private void callEndpoints(){
+
+    private void callEndpoints() {
         CityService cityService = retrofit.create(CityService.class);
 
         Observable<CityData> cryptoObservable = cityService.queryCityName("ksuhiyp", "ua", 1000, "SHORT");
@@ -171,8 +153,8 @@ public class MainFragment extends Fragment {
                         Log.d("testR", "onNext");
                         Log.d("testR", cityData.getGeonames().toString());
                         ArrayList<CityName> cityNameArrayList = cityData.getGeonames();
-                        for (int i = 0; i<cityNameArrayList.size(); i++){
-                            if (!autoCompleteCities.contains(cityNameArrayList.get(i).getName())){
+                        for (int i = 0; i < cityNameArrayList.size(); i++) {
+                            if (!autoCompleteCities.contains(cityNameArrayList.get(i).getName())) {
                                 autoCompleteCities.add(cityNameArrayList.get(i).getName());
                             }
                         }
@@ -194,8 +176,8 @@ public class MainFragment extends Fragment {
     }
 
 
-    private ArrayList<String> sortedCities(String string){
-        ArrayList<String> newCityList = new  ArrayList<>();
+    private ArrayList<String> sortedCities(String string) {
+        ArrayList<String> newCityList = new ArrayList<>();
         for (String cityName : cityNamesTest) {
             if (string.equals(cityName)) {
                 newCityList.add(cityName);
@@ -205,28 +187,28 @@ public class MainFragment extends Fragment {
         return newCityList;
     }
 
-    private void readingFromDB(){
+    private void readingFromDB() {
         Single<List<City>> single = db.cityDao().getAll();
         single.subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new SingleObserver<List<City>>() {
                     @Override
                     public void onSubscribe(Disposable d) {
+                        Log.d("testR", "onSubscribe2");
                         // add it to a CompositeDisposable
                     }
 
                     @Override
                     public void onSuccess(List<City> cities) {
-                        for (int i = 0; i<cities.size(); i++){
-                            if (!cities.isEmpty()){
-                                cityNamesTest.add(cities.get(0).getCityList());
-                            }
+                        Log.d("testR", "read2");
+                        for (int i = 0; i < cities.size(); i++) {
+                            cityNamesTest.add(cities.get(i).getCityList());
+                            Log.d("testR", "read");
 
                         }
                         adapter.notifyDataSetChanged();
 
                     }
-
 
 
                     @Override
@@ -236,7 +218,7 @@ public class MainFragment extends Fragment {
                 });
     }
 
-    private void writingToDB(final List<City> city){
+    private void writingToDB(List<City> city) {
 
         Completable.fromAction(() -> db.cityDao().insertAll(city))
                 .subscribeOn(Schedulers.io())
@@ -244,11 +226,14 @@ public class MainFragment extends Fragment {
                 .subscribe(new CompletableObserver() {
                     @Override
                     public void onSubscribe(Disposable d) {
+                        Log.d("testR", "add");
+                        Log.d("testR", String.valueOf(city.isEmpty()));
 
                     }
 
                     @Override
                     public void onComplete() {
+
                         // action was completed successfully
                     }
 
