@@ -105,6 +105,13 @@ public class MainFragment extends Fragment {
                 if (!cityNamesTest.contains(tvAdapter.getItem(i))){
                     cityNamesTest.add(tvAdapter.getItem(i));
                     adapter.notifyDataSetChanged();
+                    ArrayList<City> cities = new  ArrayList<>();
+                                          for (int j = 0; j<cityNamesTest.size(); j++){
+                                    City city = new City();
+                                              city.setCityList(cityNamesTest.get(i));
+                                          }
+                                          writingToDB(cities);
+                                          adapter.notifyDataSetChanged();
 
                 }
             }
@@ -126,13 +133,7 @@ public class MainFragment extends Fragment {
 
                                               return true;
                                           }
-                                          ArrayList<City> cities = new  ArrayList<>();
-                                          for (int j = 0; j<cityNamesTest.size(); j++){
-                                              City city = new City();
-                                              city.setCityList(cityNamesTest.get(i));
-                                          }
-                                          writingToDB(cities);
-                                          adapter.notifyDataSetChanged();
+                                          
                                           return false;
 
                                       }
